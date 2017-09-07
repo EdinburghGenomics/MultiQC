@@ -53,6 +53,10 @@ def get_filelist(run_module_names):
     ignored_patterns = []
     for key, sps in config.sp.items():
         mod_name = key.split('/', 1)[0]
+
+        # This condition essentially enforces the requirement that all search
+        # patterns match the name of the module, and thus prevents two modules
+        # from sharing patterns.
         if mod_name.lower() not in [m.lower() for m in run_module_names]:
             ignored_patterns.append(key)
             continue
@@ -170,7 +174,7 @@ def get_filelist(run_module_names):
 
 def search_file (pattern, f):
     """
-    Function to searach a single file for a single search pattern.
+    Function to search a single file for a single search pattern.
     """
 
     fn_matched = False
