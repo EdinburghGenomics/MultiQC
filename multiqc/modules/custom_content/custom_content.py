@@ -238,12 +238,6 @@ class MultiqcModule(BaseMultiqcModule):
             pconfig['sortRows'] = pconfig.get('sortRows', False)
             headers = mod['config'].get('headers')
 
-            #DEBUG
-            #from pprint import pprint
-            #import sys
-            #pprint( [ "Calling table.plot with args:",
-            #          mod['data'], headers, pconfig ], stream=sys.stderr )
-
             self.add_section( plot = table.plot(mod['data'], headers, pconfig) )
 
         # Bar plot
