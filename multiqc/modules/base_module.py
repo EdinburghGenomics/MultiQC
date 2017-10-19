@@ -210,13 +210,10 @@ class BaseMultiqcModule(object):
                     ext = {'type': 'truncate', 'pattern': ext}
                 if ext['type'] == 'truncate':
                     s_name = os.path.basename(s_name.split(ext['pattern'], 1)[0])
-                elif ext['type'] in ('remove', 'replace'):
-                    if ext['type'] == 'replace':
-                        logger.warning("use 'config.fn_clean_sample_names.remove' instead "
-                                       "of 'config.fn_clean_sample_names.replace' [deprecated]")
-                    s_name = s_name.replace(ext['pattern'], '')
+                elif ext['type'] in ('remove'):
+                    s_name = s_name.replace(ext['pattern'], ext.get(replace,''))
                 elif ext['type'] == 'regex':
-                    s_name = re.sub(ext['pattern'], '', s_name)
+                    s_name = re.sub(ext['pattern'], ext.get(replace,''), s_name)
                 elif ext['type'] == 'regex_keep':
                     match = re.search(ext['pattern'], s_name)
                     s_name = match.group() if match else s_name
