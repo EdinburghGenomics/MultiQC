@@ -27,6 +27,7 @@ class MultiqcModule(BaseMultiqcModule):
             self.parse_file_as_json(myfile)
 
         # Collect counts by lane and sample (+source_files)
+        # This also cleans the sample names as it goes.
         self.split_data_by_lane_and_sample()
 
         # Filter to strip out ignored sample names
@@ -105,7 +106,7 @@ class MultiqcModule(BaseMultiqcModule):
                 "qscore_sum": 0
             }
             for demuxResult in conversionResult["DemuxResults"]:
-                sample = self.clean_s_name(demuxResult["SampleName"], '.')
+                sample = demuxResult["SampleName"]
                 if sample in run_data[lane]["samples"]:
                     log.debug("Duplicate runId/lane/sample combination found! Overwriting: {}, {}".format(self.prepend_runid(runId, lane),sample))
                 run_data[lane]["samples"][sample] = {
@@ -134,8 +135,7 @@ class MultiqcModule(BaseMultiqcModule):
                 undeterminedYieldQ30 += readMetric["YieldQ30"]
                 undeterminedQscoreSum += readMetric["QualityScoreSum"]
 
-            # Permit the 'undetermined' name to be cleaned like any other name
-            run_data[lane]["samples"][self.clean_s_name("undetermined", '.')] = {
+            run_data[lane]["samples"]["undetermined"] = {
                 "total": conversionResult["Undetermined"]["NumberReads"],
                 "total_yield": conversionResult["Undetermined"]["Yield"],
                 "perfectIndex": 0,
@@ -169,27 +169,29 @@ class MultiqcModule(BaseMultiqcModule):
                     "mean_qscore": self.bcl2fastq_data[runId][lane]["mean_qscore"]
                 }
 
-                # FIXME - I think this might break because it assumes the names don't
-                # get cleaned before going in the table.
+                # Note - at this point the sample names are uncleaned.
                 for sample in self.bcl2fastq_data[runId][lane]["samples"].keys():
-                    if not sample in self.bcl2fastq_bysample:
-                        self.bcl2fastq_bysample[sample] = {
+                    # Clean it up
+                    csample = self.clean_s_name(sample, '.')
+
+                    if not csample in self.bcl2fastq_bysample:
+                        self.bcl2fastq_bysample[csample] = {
                             "total": 0,
                             "total_yield": 0,
                             "perfectIndex": 0,
                             "yieldQ30": 0,
                             "qscore_sum": 0
                         }
-                    self.bcl2fastq_bysample[sample]["total"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["total"]
-                    self.bcl2fastq_bysample[sample]["total_yield"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["total_yield"]
-                    self.bcl2fastq_bysample[sample]["perfectIndex"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["perfectIndex"]
-                    self.bcl2fastq_bysample[sample]["yieldQ30"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["yieldQ30"]
-                    self.bcl2fastq_bysample[sample]["qscore_sum"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["qscore_sum"]
-                    self.bcl2fastq_bysample[sample]["percent_Q30"] = (float(self.bcl2fastq_bysample[sample]["yieldQ30"]) / float(self.bcl2fastq_bysample[sample]["total_yield"])) * 100.0
-                    self.bcl2fastq_bysample[sample]["percent_perfectIndex"] = (float(self.bcl2fastq_bysample[sample]["perfectIndex"]) / float(self.bcl2fastq_bysample[sample]["total"])) * 100.0
-                    self.bcl2fastq_bysample[sample]["mean_qscore"] = float(self.bcl2fastq_bysample[sample]["qscore_sum"]) / float(self.bcl2fastq_bysample[sample]["total_yield"])
-                    if sample in self.bcl2fastq_data[runId][lane]["samples"]:
-                        self.source_files.setdefault(sample,[]).append(
+                    self.bcl2fastq_bysample[csample]["total"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["total"]
+                    self.bcl2fastq_bysample[csample]["total_yield"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["total_yield"]
+                    self.bcl2fastq_bysample[csample]["perfectIndex"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["perfectIndex"]
+                    self.bcl2fastq_bysample[csample]["yieldQ30"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["yieldQ30"]
+                    self.bcl2fastq_bysample[csample]["qscore_sum"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["qscore_sum"]
+                    self.bcl2fastq_bysample[csample]["percent_Q30"] = (float(self.bcl2fastq_bysample[sample]["yieldQ30"]) / float(self.bcl2fastq_bysample[sample]["total_yield"])) * 100.0
+                    self.bcl2fastq_bysample[csample]["percent_perfectIndex"] = (float(self.bcl2fastq_bysample[sample]["perfectIndex"]) / float(self.bcl2fastq_bysample[sample]["total"])) * 100.0
+                    self.bcl2fastq_bysample[csample]["mean_qscore"] = float(self.bcl2fastq_bysample[sample]["qscore_sum"]) / float(self.bcl2fastq_bysample[sample]["total_yield"])
+                    if self.bcl2fastq_data[runId][lane]["samples"][sample].get("filename"):
+                        self.source_files.setdefault(csample,[]).append(
                             self.bcl2fastq_data[runId][lane]["samples"][sample]["filename"] )
 
     def add_general_stats(self):
