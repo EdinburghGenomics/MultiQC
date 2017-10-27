@@ -1,3 +1,5 @@
+from __future__ import division, print_function
+
 from multiqc.modules.base_module import BaseMultiqcModule
 import logging
 import os
@@ -187,9 +189,9 @@ class MultiqcModule(BaseMultiqcModule):
                     self.bcl2fastq_bysample[csample]["perfectIndex"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["perfectIndex"]
                     self.bcl2fastq_bysample[csample]["yieldQ30"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["yieldQ30"]
                     self.bcl2fastq_bysample[csample]["qscore_sum"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["qscore_sum"]
-                    self.bcl2fastq_bysample[csample]["percent_Q30"] = (float(self.bcl2fastq_bysample[sample]["yieldQ30"]) / float(self.bcl2fastq_bysample[sample]["total_yield"])) * 100.0
-                    self.bcl2fastq_bysample[csample]["percent_perfectIndex"] = (float(self.bcl2fastq_bysample[sample]["perfectIndex"]) / float(self.bcl2fastq_bysample[sample]["total"])) * 100.0
-                    self.bcl2fastq_bysample[csample]["mean_qscore"] = float(self.bcl2fastq_bysample[sample]["qscore_sum"]) / float(self.bcl2fastq_bysample[sample]["total_yield"])
+                    self.bcl2fastq_bysample[csample]["percent_Q30"] = (float(self.bcl2fastq_bysample[csample]["yieldQ30"]) / float(self.bcl2fastq_bysample[csample]["total_yield"])) * 100.0
+                    self.bcl2fastq_bysample[csample]["percent_perfectIndex"] = (float(self.bcl2fastq_bysample[csample]["perfectIndex"]) / float(self.bcl2fastq_bysample[csample]["total"])) * 100.0
+                    self.bcl2fastq_bysample[csample]["mean_qscore"] = float(self.bcl2fastq_bysample[csample]["qscore_sum"]) / float(self.bcl2fastq_bysample[csample]["total_yield"])
                     if self.bcl2fastq_data[runId][lane]["samples"][sample].get("filename"):
                         self.source_files.setdefault(csample,[]).append(
                             self.bcl2fastq_data[runId][lane]["samples"][sample]["filename"] )
