@@ -133,7 +133,9 @@ class MultiqcModule(BaseMultiqcModule):
             for readMetric in conversionResult["Undetermined"]["ReadMetrics"]:
                 undeterminedYieldQ30 += readMetric["YieldQ30"]
                 undeterminedQscoreSum += readMetric["QualityScoreSum"]
-            run_data[lane]["samples"]["undetermined"] = {
+
+            # Permit the 'undetermined' name to be cleaned like any other name
+            run_data[lane]["samples"][self.clean_s_name("undetermined", '.')] = {
                 "total": conversionResult["Undetermined"]["NumberReads"],
                 "total_yield": conversionResult["Undetermined"]["Yield"],
                 "perfectIndex": 0,
@@ -166,6 +168,9 @@ class MultiqcModule(BaseMultiqcModule):
                     "percent_perfectIndex": self.bcl2fastq_data[runId][lane]["percent_perfectIndex"],
                     "mean_qscore": self.bcl2fastq_data[runId][lane]["mean_qscore"]
                 }
+
+                # FIXME - I think this might break because it assumes the names don't
+                # get cleaned before going in the table.
                 for sample in self.bcl2fastq_data[runId][lane]["samples"].keys():
                     if not sample in self.bcl2fastq_bysample:
                         self.bcl2fastq_bysample[sample] = {
@@ -183,10 +188,9 @@ class MultiqcModule(BaseMultiqcModule):
                     self.bcl2fastq_bysample[sample]["percent_Q30"] = (float(self.bcl2fastq_bysample[sample]["yieldQ30"]) / float(self.bcl2fastq_bysample[sample]["total_yield"])) * 100.0
                     self.bcl2fastq_bysample[sample]["percent_perfectIndex"] = (float(self.bcl2fastq_bysample[sample]["perfectIndex"]) / float(self.bcl2fastq_bysample[sample]["total"])) * 100.0
                     self.bcl2fastq_bysample[sample]["mean_qscore"] = float(self.bcl2fastq_bysample[sample]["qscore_sum"]) / float(self.bcl2fastq_bysample[sample]["total_yield"])
-                    if sample != "undetermined":
-                        if not sample in self.source_files:
-                            self.source_files[sample] = []
-                        self.source_files[sample].append(self.bcl2fastq_data[runId][lane]["samples"][sample]["filename"])
+                    if sample in self.bcl2fastq_data[runId][lane]["samples"]:
+                        self.source_files.setdefault(sample,[]).append(
+                            self.bcl2fastq_data[runId][lane]["samples"][sample]["filename"] )
 
     def add_general_stats(self):
         data = {
