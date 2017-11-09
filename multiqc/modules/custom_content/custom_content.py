@@ -206,7 +206,7 @@ def custom_module_classes():
 
     # Sort sections if we have a config option for order
     mod_order = getattr(config, 'custom_content', {}).get('order', [])
-    sorted_modules = [m for m in parsed_modules if m.anchor not in mod_order ]
+    sorted_modules = sorted([m for m in parsed_modules if m.anchor not in mod_order], key=lambda m: m.anchor)
     sorted_modules.extend([m for k in mod_order for m in parsed_modules if m.anchor == k ])
 
     return sorted_modules
@@ -226,7 +226,8 @@ class MultiqcModule(BaseMultiqcModule):
             name = modname,
             anchor = mod['config'].get('section_anchor', c_id),
             href = mod['config'].get('section_href'),
-            info = mod['config'].get('description')
+            info = mod['config'].get('description'),
+            target = modname if 'section_anchor' in mod['config'] else ''
         )
 
         pconfig = mod['config'].get('pconfig', {})
