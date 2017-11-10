@@ -10,6 +10,21 @@ from multiqc.plots import bargraph, table
 
 log = logging.getLogger(__name__)
 
+def rat(n, d, nan=0.0, mul=1.0):
+    """ Calculate a ratio while avoiding division by zero errors.
+        Strictly speaking we should have nan=float('nan') but for practical
+        purposes we'll normally report 0.0.
+    """
+    try:
+        return ( float(n) * mul ) / float(d)
+    except ZeroDivisionError:
+        return nan
+
+def pct(n, d, mul=100.0, **kwargs):
+    """ Percentage by the same logic.
+    """
+    return rat(n, d, mul=mul, **kwargs)
+
 class MultiqcModule(BaseMultiqcModule):
     def __init__(self):
         # Initialise the parent object
@@ -37,9 +52,13 @@ class MultiqcModule(BaseMultiqcModule):
         self.bcl2fastq_bysample = self.ignore_samples(self.bcl2fastq_bysample)
 
         # Return with Warning if no files are found
-        if len(self.bcl2fastq_bylane) == 0 and len(self.bcl2fastq_bysample) == 0:
+        if not ( self.bcl2fastq_bylane or self.bcl2fastq_bysample ):
             log.debug("Could not find any bcl2fastq data in {}".format(config.analysis_dir))
             raise UserWarning
+
+        log.info("Found info for {} lanes, {} samples.".format(
+                                 len(self.bcl2fastq_bylane),
+                                           len(self.bcl2fastq_bysample) ))
 
         # Print source files
         for s in self.source_files.keys():
@@ -145,15 +164,15 @@ class MultiqcModule(BaseMultiqcModule):
                 "qscore_sum": undeterminedQscoreSum
             }
 
-        # Calculate Percents and averages
+        # Calculate Percents and averages. Beware of division by zero!
         for lane in run_data:
-            run_data[lane]["percent_Q30"] = (float(run_data[lane]["yieldQ30"]) / float(run_data[lane]["total_yield"])) * 100.0
-            run_data[lane]["percent_perfectIndex"] = (float(run_data[lane]["perfectIndex"]) / float(run_data[lane]["total"])) * 100.0
-            run_data[lane]["mean_qscore"] = float(run_data[lane]["qscore_sum"]) / float(run_data[lane]["total_yield"])
+            run_data[lane]["percent_Q30"] = pct(run_data[lane]["yieldQ30"], run_data[lane]["total_yield"])
+            run_data[lane]["percent_perfectIndex"] = pct(run_data[lane]["perfectIndex"], run_data[lane]["total"])
+            run_data[lane]["mean_qscore"] = rat(run_data[lane]["qscore_sum"], run_data[lane]["total_yield"])
             for sample, d in run_data[lane]["samples"].items():
-                run_data[lane]["samples"][sample]["percent_Q30"] = (float(d["yieldQ30"]) / float(d["total_yield"])) * 100.0
-                run_data[lane]["samples"][sample]["percent_perfectIndex"] = (float(d["perfectIndex"]) / float(d["total"])) * 100.0
-                run_data[lane]["samples"][sample]["mean_qscore"] = float(d["qscore_sum"]) / float(d["total_yield"])
+                run_data[lane]["samples"][sample]["percent_Q30"] = pct(d["yieldQ30"], d["total_yield"])
+                run_data[lane]["samples"][sample]["percent_perfectIndex"] = pct(d["perfectIndex"], d["total"])
+                run_data[lane]["samples"][sample]["mean_qscore"] = rat(d["qscore_sum"], d["total_yield"])
 
     def split_data_by_lane_and_sample(self):
         for runId in self.bcl2fastq_data.keys():
@@ -189,9 +208,12 @@ class MultiqcModule(BaseMultiqcModule):
                     self.bcl2fastq_bysample[csample]["perfectIndex"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["perfectIndex"]
                     self.bcl2fastq_bysample[csample]["yieldQ30"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["yieldQ30"]
                     self.bcl2fastq_bysample[csample]["qscore_sum"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["qscore_sum"]
-                    self.bcl2fastq_bysample[csample]["percent_Q30"] = (float(self.bcl2fastq_bysample[csample]["yieldQ30"]) / float(self.bcl2fastq_bysample[csample]["total_yield"])) * 100.0
-                    self.bcl2fastq_bysample[csample]["percent_perfectIndex"] = (float(self.bcl2fastq_bysample[csample]["perfectIndex"]) / float(self.bcl2fastq_bysample[csample]["total"])) * 100.0
-                    self.bcl2fastq_bysample[csample]["mean_qscore"] = float(self.bcl2fastq_bysample[csample]["qscore_sum"]) / float(self.bcl2fastq_bysample[csample]["total_yield"])
+                    self.bcl2fastq_bysample[csample]["percent_Q30"] = pct(self.bcl2fastq_bysample[csample]["yieldQ30"],
+                                                                          self.bcl2fastq_bysample[csample]["total_yield"])
+                    self.bcl2fastq_bysample[csample]["percent_perfectIndex"] = pct(self.bcl2fastq_bysample[csample]["perfectIndex"],
+                                                                                   self.bcl2fastq_bysample[csample]["total"])
+                    self.bcl2fastq_bysample[csample]["mean_qscore"] = rat(self.bcl2fastq_bysample[csample]["qscore_sum"],
+                                                                          self.bcl2fastq_bysample[csample]["total_yield"])
                     if self.bcl2fastq_data[runId][lane]["samples"][sample].get("filename"):
                         self.source_files.setdefault(csample,[]).append(
                             self.bcl2fastq_data[runId][lane]["samples"][sample]["filename"] )
@@ -202,7 +224,7 @@ class MultiqcModule(BaseMultiqcModule):
                 "yieldQ30": self.bcl2fastq_bysample[key]["yieldQ30"],
                 "total": self.bcl2fastq_bysample[key]["total"],
                 "perfectPercent": '{0:.1f}'.format(
-                    float( 100.0 * self.bcl2fastq_bysample[key]["perfectIndex"] / self.bcl2fastq_bysample[key]["total"] )
+                    pct( self.bcl2fastq_bysample[key]["perfectIndex"], self.bcl2fastq_bysample[key]["total"] )
                 )
             } for key in self.bcl2fastq_bysample.keys()
         }
