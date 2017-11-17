@@ -161,7 +161,8 @@ def make_table (dt):
                 valstring = valstring.replace('DECIMAL', config.decimalPoint_format).replace('THOUSAND', config.thousandsSep_format)
 
                 # Percentage suffixes etc
-                valstring += header.get('suffix', '')
+                if val is not None:
+                    valstring += header.get('suffix', '')
 
                 # Build HTML
                 if not header.get('scale'):

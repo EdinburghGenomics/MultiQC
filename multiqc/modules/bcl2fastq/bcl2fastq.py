@@ -17,7 +17,7 @@ def rat(n, d, nan=None, mul=1.0):
     """
     try:
         return ( float(n) * mul ) / float(d)
-    except ZeroDivisionError:
+    except (ZeroDivisionError, TypeError):
         return nan
 
 def pct(n, d, mul=100.0, **kwargs):
@@ -146,6 +146,9 @@ class MultiqcModule(BaseMultiqcModule):
                 for indexMetric in demuxResult.get("IndexMetrics",[]):
                     run_data[lane]["perfectIndex"] += indexMetric["MismatchCounts"]["0"]
                     run_data[lane]["samples"][sample]["perfectIndex"] += indexMetric["MismatchCounts"]["0"]
+                else:
+                    run_data[lane]["perfectIndex"] = None
+                    run_data[lane]["samples"][sample]["perfectIndex"] = None
                 for readMetric in demuxResult["ReadMetrics"]:
                     run_data[lane]["yieldQ30"] += readMetric["YieldQ30"]
                     run_data[lane]["qscore_sum"] += readMetric["QualityScoreSum"]
@@ -196,33 +199,31 @@ class MultiqcModule(BaseMultiqcModule):
                     "mean_qscore": self.bcl2fastq_data[runId][lane]["mean_qscore"]
                 }
 
-                # Note - at this point the sample names are uncleaned.
-                for sample in self.bcl2fastq_data[runId][lane]["samples"].keys():
-                    # Clean it up
+                for sample, sinfo in self.bcl2fastq_data[runId][lane]["samples"].items():
+                    # Note - at this point the sample names are uncleaned.
+                    # so clean it up
                     csample = self.clean_s_name(sample, '.')
 
-                    if not csample in self.bcl2fastq_bysample:
-                        self.bcl2fastq_bysample[csample] = {
+                    totals = self.bcl2fastq_bysample.setdefault(csample, {
                             "total": 0,
                             "total_yield": 0,
-                            "perfectIndex": 0,
+                            "perfectIndex": None,
                             "yieldQ30": 0,
                             "qscore_sum": 0
-                        }
-                    self.bcl2fastq_bysample[csample]["total"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["total"]
-                    self.bcl2fastq_bysample[csample]["total_yield"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["total_yield"]
-                    self.bcl2fastq_bysample[csample]["perfectIndex"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["perfectIndex"]
-                    self.bcl2fastq_bysample[csample]["yieldQ30"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["yieldQ30"]
-                    self.bcl2fastq_bysample[csample]["qscore_sum"] += self.bcl2fastq_data[runId][lane]["samples"][sample]["qscore_sum"]
-                    self.bcl2fastq_bysample[csample]["percent_Q30"] = pct(self.bcl2fastq_bysample[csample]["yieldQ30"],
-                                                                          self.bcl2fastq_bysample[csample]["total_yield"])
-                    self.bcl2fastq_bysample[csample]["percent_perfectIndex"] = pct(self.bcl2fastq_bysample[csample]["perfectIndex"],
-                                                                                   self.bcl2fastq_bysample[csample]["total"])
-                    self.bcl2fastq_bysample[csample]["mean_qscore"] = rat(self.bcl2fastq_bysample[csample]["qscore_sum"],
-                                                                          self.bcl2fastq_bysample[csample]["total_yield"])
-                    if self.bcl2fastq_data[runId][lane]["samples"][sample].get("filename"):
-                        self.source_files.setdefault(csample,[]).append(
-                            self.bcl2fastq_data[runId][lane]["samples"][sample]["filename"] )
+                        })
+
+                    totals["total"] += sinfo["total"]
+                    totals["total_yield"] += sinfo["total_yield"]
+                    if sinfo["perfectIndex"] is not None:
+                        totals["perfectIndex"] = (totals["perfectIndex"] or 0) + sinfo["perfectIndex"]
+                    totals["yieldQ30"] += sinfo["yieldQ30"]
+                    totals["qscore_sum"] += sinfo["qscore_sum"]
+
+                    totals["percent_Q30"]          = pct(totals["yieldQ30"], totals["total_yield"])
+                    totals["percent_perfectIndex"] = pct(totals["perfectIndex"], totals["total"])
+                    totals["mean_qscore"]          = rat(totals["qscore_sum"], totals["total_yield"])
+                    if sinfo.get("filename"):
+                        self.source_files.setdefault(csample,[]).append( sinfo["filename"] )
 
     def add_general_stats(self):
         data = {
@@ -316,10 +317,15 @@ class MultiqcModule(BaseMultiqcModule):
     def get_bar_data_from_counts(self, counts):
         bar_data = {}
         for key, value in counts.items():
-            bar_data[key] = {
-                "perfect": value["perfectIndex"],
-                "imperfect": value["total"] - value["perfectIndex"],
-            }
+            if value["perfectIndex"] is not None:
+                bar_data[key] = {
+                    "perfect": value["perfectIndex"],
+                    "imperfect": value["total"] - value["perfectIndex"],
+                }
+            else:
+                bar_data[key] = {
+                    "noindex": value["total"]
+                }
             if "undetermined" in value:
                 bar_data[key]["undetermined"] = value["undetermined"]
         return bar_data
