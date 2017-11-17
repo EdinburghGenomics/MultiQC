@@ -10,7 +10,7 @@ from multiqc.plots import bargraph, table
 
 log = logging.getLogger(__name__)
 
-def rat(n, d, nan=0.0, mul=1.0):
+def rat(n, d, nan=None, mul=1.0):
     """ Calculate a ratio while avoiding division by zero errors.
         Strictly speaking we should have nan=float('nan') but for practical
         purposes we'll normally report 0.0.
@@ -229,9 +229,7 @@ class MultiqcModule(BaseMultiqcModule):
             key: {
                 "yieldQ30": self.bcl2fastq_bysample[key]["yieldQ30"],
                 "total": self.bcl2fastq_bysample[key]["total"],
-                "perfectPercent": '{0:.1f}'.format(
-                    pct( self.bcl2fastq_bysample[key]["perfectIndex"], self.bcl2fastq_bysample[key]["total"] )
-                )
+                "perfectPercent": pct( self.bcl2fastq_bysample[key]["perfectIndex"], self.bcl2fastq_bysample[key]["total"] )
             } for key in self.bcl2fastq_bysample.keys()
         }
         headers = OrderedDict()
@@ -257,7 +255,8 @@ class MultiqcModule(BaseMultiqcModule):
             'max': 100,
             'min': 0,
             'scale': 'RdYlGn',
-            'suffix': '%'
+            'suffix': '%',
+            'format': '{0:.1f}'
         }
         self.general_stats_addcols(data, headers)
 

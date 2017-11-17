@@ -139,7 +139,7 @@ def make_table (dt):
                     percentage = ((float(val) - dmin) / (dmax - dmin)) * 100;
                     percentage = min(percentage, 100)
                     percentage = max(percentage, 0)
-                except (ZeroDivisionError,ValueError):
+                except (ZeroDivisionError,ValueError,TypeError):
                     percentage = 0
 
                 try:
@@ -150,7 +150,7 @@ def make_table (dt):
                     except ValueError:
                         valstring = str(val)
                 except:
-                    valstring = str(val)
+                    valstring = '' if val is None else str(val)
 
                 # This is horrible, but Python locale settings are worse
                 if config.thousandsSep_format is None:
