@@ -142,7 +142,8 @@ class MultiqcModule(BaseMultiqcModule):
                 run_data[lane]["total_yield"] += demuxResult["Yield"]
                 run_data[lane]["samples"][sample]["total"] += demuxResult["NumberReads"]
                 run_data[lane]["samples"][sample]["total_yield"] += demuxResult["Yield"]
-                for indexMetric in demuxResult["IndexMetrics"]:
+                #If there was no index, there will be no metrics!
+                for indexMetric in demuxResult.get("IndexMetrics",[]):
                     run_data[lane]["perfectIndex"] += indexMetric["MismatchCounts"]["0"]
                     run_data[lane]["samples"][sample]["perfectIndex"] += indexMetric["MismatchCounts"]["0"]
                 for readMetric in demuxResult["ReadMetrics"]:
@@ -152,6 +153,11 @@ class MultiqcModule(BaseMultiqcModule):
                     run_data[lane]["samples"][sample]["qscore_sum"] += readMetric["QualityScoreSum"]
             undeterminedYieldQ30 = 0
             undeterminedQscoreSum = 0
+            #If there was no index, there will be no undetermined metrics.
+            conversionResult.setdefault("Undetermined", dict( ReadMetrics = [],
+                                                              NumberReads = 0,
+                                                              Yield = 0.0 ))
+
             for readMetric in conversionResult["Undetermined"]["ReadMetrics"]:
                 undeterminedYieldQ30 += readMetric["YieldQ30"]
                 undeterminedQscoreSum += readMetric["QualityScoreSum"]
