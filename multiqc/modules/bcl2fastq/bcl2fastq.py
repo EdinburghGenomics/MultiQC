@@ -143,10 +143,11 @@ class MultiqcModule(BaseMultiqcModule):
                 run_data[lane]["samples"][sample]["total"] += demuxResult["NumberReads"]
                 run_data[lane]["samples"][sample]["total_yield"] += demuxResult["Yield"]
                 #If there was no index, there will be no metrics!
+                indexMetric = None
                 for indexMetric in demuxResult.get("IndexMetrics",[]):
                     run_data[lane]["perfectIndex"] += indexMetric["MismatchCounts"]["0"]
                     run_data[lane]["samples"][sample]["perfectIndex"] += indexMetric["MismatchCounts"]["0"]
-                else:
+                if indexMetric is None:
                     run_data[lane]["perfectIndex"] = None
                     run_data[lane]["samples"][sample]["perfectIndex"] = None
                 for readMetric in demuxResult["ReadMetrics"]:
