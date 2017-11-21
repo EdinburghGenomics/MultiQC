@@ -236,12 +236,12 @@ class MultiqcModule(BaseMultiqcModule):
         }
         headers = OrderedDict()
         headers['total'] = {
-            'title': '{} Total Reads'.format(config.read_count_prefix),
+            'title': 'Total Reads',
             'description': 'Total number of reads for this sample as determined by bcl2fastq demultiplexing ({})'.format(config.read_count_desc),
             'min': 0,
             'scale': 'Blues',
-            'modify': lambda x: x * config.read_count_multiplier,
-            'shared_key': 'read_count'
+            'shared_key': 'read_count',
+            'format': '{:,}'
         }
         headers['yieldQ30'] = {
             'title': '{} Yield &ge; Q30'.format(config.base_count_prefix),
