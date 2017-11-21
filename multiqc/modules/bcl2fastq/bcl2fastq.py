@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 def rat(n, d, nan=None, mul=1.0):
     """ Calculate a ratio while avoiding division by zero errors.
         Strictly speaking we should have nan=float('nan') but for practical
-        purposes we'll normally report 0.0.
+        purposes we'll normally report None (or 0.0?).
     """
     try:
         return ( float(n) * mul ) / float(d)
