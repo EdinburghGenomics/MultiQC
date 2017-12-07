@@ -5,6 +5,7 @@ from __future__ import division, print_function, absolute_import
 
 from collections import defaultdict, OrderedDict
 import logging
+import cgi
 
 from multiqc.utils import config, util_functions, mqc_colour
 from multiqc.plots import table_object, beeswarm
@@ -81,6 +82,8 @@ def make_table (dt):
             checked = ''
             hidden_cols += 1
 
+        cell_class = 'text-cell' if header.get('textcell', False) is True else 'data-coloured'
+
         data_attr = 'data-dmax="{}" data-dmin="{}" data-namespace="{}" {}' \
             .format(header['dmax'], header['dmin'], header['namespace'], shared_key)
 
@@ -90,7 +93,8 @@ def make_table (dt):
         t_headers[rid] = '<th id="header_{rid}" class="{rid} {h}" {da}>{c}</th>' \
             .format(rid=rid, h=hide, da=data_attr, c=cell_contents)
 
-        empty_cells[rid] = '<td class="data-coloured {rid} {h}"></td>'.format(rid=rid, h=hide)
+        empty_cells[rid] = '<td class="{cls} {rid} {h}"></td>'.format(
+                                        cls=cell_class, rid=rid, h=hide)
 
         # Build the modal table row
         t_modal_headers[rid] = """
@@ -152,13 +156,16 @@ def make_table (dt):
                 except:
                     valstring = '' if val is None else str(val)
 
-                # This is horrible, but Python locale settings are worse
-                if config.thousandsSep_format is None:
-                    config.thousandsSep_format = '<span class="mqc_thousandSep"></span>'
-                if config.decimalPoint_format is None:
-                    config.decimalPoint_format = '.'
-                valstring = valstring.replace('.', 'DECIMAL').replace(',', 'THOUSAND')
-                valstring = valstring.replace('DECIMAL', config.decimalPoint_format).replace('THOUSAND', config.thousandsSep_format)
+                if header.get('textcell', False) is True:
+                    valstring = cgi.escape(valstring)
+                else:
+                    # This is horrible, but Python locale settings are worse
+                    if config.thousandsSep_format is None:
+                        config.thousandsSep_format = '<span class="mqc_thousandSep"></span>'
+                    if config.decimalPoint_format is None:
+                        config.decimalPoint_format = '.'
+                    valstring = valstring.replace('.', 'DECIMAL').replace(',', 'THOUSAND')
+                    valstring = valstring.replace('DECIMAL', config.decimalPoint_format).replace('THOUSAND', config.thousandsSep_format)
 
                 # Percentage suffixes etc
                 if val is not None:
@@ -176,11 +183,17 @@ def make_table (dt):
                         col = ''
                     bar_html = '<span class="bar" style="width:{}%;{}"></span>'.format(percentage, col)
                     val_html = '<span class="val">{}</span>'.format(valstring)
-                    wrapper_html = '<div class="wrapper">{}{}</div>'.format(bar_html, val_html)
+
+                    # Seems the popup text needs to go on this element...
+                    if header.get('textcell', False) is True:
+                        wrapper_html = '<div class="wrapper" title="{}">{}</div>'.format(valstring, val_html)
+                    else:
+                        wrapper_html = '<div class="wrapper">{}{}</div>'.format(bar_html, val_html)
 
                     if s_name not in t_rows:
                         t_rows[s_name] = dict()
-                    t_rows[s_name][rid] = '<td class="data-coloured {rid} {h}">{c}</td>'.format(rid=rid, h=hide, c=wrapper_html)
+                    t_rows[s_name][rid] = '<td class="{cls} {rid} {h}">{c}</td>'.format(
+                                                       cls=cell_class, rid=rid, h=hide, c=wrapper_html )
 
         # Remove header if we don't have any filled cells for it
         if sum([len(rows) for rows in t_rows.values()]) == 0:

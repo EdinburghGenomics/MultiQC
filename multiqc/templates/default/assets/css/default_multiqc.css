@@ -709,6 +709,18 @@ tbody .sorthandle {
 .mqc_table .data-coloured {
     padding: 0;
 }
+.mqc_table .text-cell {
+    padding: 0;
+}
+.mqc_table .text-cell .val {
+    padding: 2px;
+    //font-size: 0.8em;
+    //width: 100%;
+}
+.mqc_table .text-cell .wrapper {
+    overflow: hidden;
+    z-index: 10;
+}
 .mqc_table .wrapper {
     display: inline-block;
     position: relative;
