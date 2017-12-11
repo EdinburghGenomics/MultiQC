@@ -312,7 +312,8 @@ class MultiqcModule(BaseMultiqcModule):
             'min': 0,
             'scale': 'Blues',
             'modify': lambda x: x * config.read_count_multiplier,
-            'shared_key': 'read_count'
+            'shared_key': 'read_count',
+            'hidden': True # Disabled since we have this from Stats.json (TODO - make configurable)
         }
         self.general_stats_addcols(data, headers)
 
