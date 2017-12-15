@@ -6,7 +6,10 @@ from __future__ import print_function
 from collections import OrderedDict
 import json
 import logging
-import re
+import os, re
+import shutil
+from html import escape as html_escape
+from urllib.parse import quote as url_escape
 
 from multiqc import config
 from multiqc.plots import bargraph
@@ -54,8 +57,68 @@ class MultiqcModule(BaseMultiqcModule):
         else:
             self.add_section( plot = self.fqscreen_simple_plot() )
 
+        # See if we want to tack on the image files. This is a little crude but wanted for our
+        # reports.
+        if getattr(config, 'fastq_screen_config', {}).get('tack_on_images'):
+           self.add_section( name = "Original Plots",
+                             content = self.tack_on_images() )
+
         # Write the total counts and percentages to files
         self.write_data_file(self.parse_csv(), 'multiqc_fastq_screen')
+
+
+    def tack_on_images(self):
+        """ There should be a .png file per .html file. Copy the file into the data_dir
+            and bung in a link to it here.
+            This breaks the idea of embedding all images but never mind.
+        """
+        links = dict()
+        for f in self.find_log_files('fastq_screen', filehandles=True):
+            png_file = re.sub(r'\.[^.]*', '.png', f['fn'])
+            f['f'].close()
+
+            if not self.fq_screen_data.get(f['s_name']):
+                continue
+            try:
+                shutil.copy(os.path.join(f['root'], png_file),
+                            os.path.join(config.data_dir, png_file))
+                png_relpath = os.path.join(config.data_dir_name, png_file)
+
+                #Let's use a popover, since bootstrap is already loaded in the document.
+                #https://www.w3schools.com/bootstrap/bootstrap_popover.asp
+                links[f['s_name']] = "<a href='{l}' class='fqspopover' title='{t} FastQ Screen'>{t}</a>".format(
+                    l=url_escape(png_relpath), t=html_escape(f['s_name']) )
+            except FileNotFoundError:
+                log.warning("No .png file for {}".format(f['fn']))
+
+        # La la la javascript.
+        jscript = r'''<script>
+        $(document).ready(function() {
+            $('.fqspopover').click( function(){
+                var el = $(this);
+                var itag = document.createElement('img'); itag.src = el[0].href;
+                el.unbind('click').popover({
+                    content: itag,
+                    title: el.title,
+                    html: true,
+                    delay: {show: 100, hide: 100}
+                }).popover('show');
+                el.click( function() { return false } );
+                return false; //No linky when JS is working.
+            });
+            $('html').on('click', function(e) {
+                if (typeof $(e.target).data('original-title') == 'undefined' &&
+                    !$(e.target).parents().is('.popover.in')) {
+                    $('.fqspopover').popover('hide');
+                }
+            });
+        });
+        </script>''';
+
+        #Output in sorted order.
+        if not links:
+            links['error'] = "No FastQ Screen plots were found."
+        return jscript + "<div>" +  " ".join([links[k] for k in sorted(links)]) + "</div>"
 
 
     def parse_fqscreen(self, f):
