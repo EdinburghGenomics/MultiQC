@@ -147,6 +147,7 @@ class MultiqcModule(BaseMultiqcModule):
                 for indexMetric in demuxResult.get("IndexMetrics",[]):
                     run_data[lane]["perfectIndex"] += indexMetric["MismatchCounts"]["0"]
                     run_data[lane]["samples"][sample]["perfectIndex"] += indexMetric["MismatchCounts"]["0"]
+                    run_data[lane]["samples"][sample]["IndexSequence"] = indexMetric["IndexSequence"]
                 if indexMetric is None:
                     run_data[lane]["perfectIndex"] = None
                     run_data[lane]["samples"][sample]["perfectIndex"] = None
@@ -210,7 +211,8 @@ class MultiqcModule(BaseMultiqcModule):
                             "total_yield": 0,
                             "perfectIndex": None,
                             "yieldQ30": 0,
-                            "qscore_sum": 0
+                            "qscore_sum": 0,
+                            "IndexSequence": set(),
                         })
 
                     totals["total"] += sinfo["total"]
@@ -219,6 +221,8 @@ class MultiqcModule(BaseMultiqcModule):
                         totals["perfectIndex"] = (totals["perfectIndex"] or 0) + sinfo["perfectIndex"]
                     totals["yieldQ30"] += sinfo["yieldQ30"]
                     totals["qscore_sum"] += sinfo["qscore_sum"]
+                    if sinfo.get("IndexSequence"):
+                        totals["IndexSequence"].add(sinfo["IndexSequence"])
 
                     totals["percent_Q30"]          = pct(totals["yieldQ30"], totals["total_yield"])
                     totals["percent_perfectIndex"] = pct(totals["perfectIndex"], totals["total"])
@@ -261,6 +265,23 @@ class MultiqcModule(BaseMultiqcModule):
             'suffix': '%',
             'format': '{0:.1f}'
         }
+
+        # Now add the index sequences to the data. In the general case, it's possible that the
+        # sample appeared on one lane with multiple indexes or on multiple lanes with different
+        # indexes so we just join the set with commas.
+        if getattr(config, 'bcl2fastq_config', {}).get('add_index_sequences'):
+            for k, v in data.items():
+                v['indexSeq'] = ','.join(sorted(self.bcl2fastq_bysample[k].get("IndexSequence", [])))
+
+        if any(v.get('indexSeq') for v in data.values()):
+            headers['indexSeq'] = {
+                'title': 'Index Sequence',
+                'description': 'Index sequence as set in the Sample Sheet (ie. as read by the sequencer)',
+                'format': '{s}',
+                'placement': 5.0,
+                'textcell': True
+            }
+
         self.general_stats_addcols(data, headers)
 
     def lane_stats_table(self):
