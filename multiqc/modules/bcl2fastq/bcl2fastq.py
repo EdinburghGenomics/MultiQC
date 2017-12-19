@@ -213,6 +213,7 @@ class MultiqcModule(BaseMultiqcModule):
                             "yieldQ30": 0,
                             "qscore_sum": 0,
                             "IndexSequence": set(),
+                            "SampleNames" : list(),
                         })
 
                     totals["total"] += sinfo["total"]
@@ -223,6 +224,9 @@ class MultiqcModule(BaseMultiqcModule):
                     totals["qscore_sum"] += sinfo["qscore_sum"]
                     if sinfo.get("IndexSequence"):
                         totals["IndexSequence"].add(sinfo["IndexSequence"])
+                    # Add the cleaned sample name so I can infer the pool. I may need to explicitly
+                    # capture SapleID instead if we change the format of the sample sheets at all.
+                    totals["SampleNames"].append(sample)
 
                     totals["percent_Q30"]          = pct(totals["yieldQ30"], totals["total_yield"])
                     totals["percent_perfectIndex"] = pct(totals["perfectIndex"], totals["total"])
@@ -279,6 +283,26 @@ class MultiqcModule(BaseMultiqcModule):
                 'description': 'Index sequence as set in the Sample Sheet (ie. as read by the sequencer)',
                 'format': '{s}',
                 'placement': 5.0,
+                'textcell': True
+            }
+
+        # And likewise for the pool name (yes, this is very Edinburgh Genomics centric but I need it
+        # to work so I'm stuffing it in here!)
+        # Again, it's theoretically possible to see the same sample in two pools so use a set.
+        if getattr(config, 'bcl2fastq_config', {}).get('add_pool_names'):
+            for k, v in data.items():
+                pools_for_sample = [ sn.split("__")[0] if "__" in sn else ""
+                                     for sn in self.bcl2fastq_bysample[k].get("SampleNames", []) ]
+                pools_set = set( pn for pn in pools_for_sample
+                                 if pn.lower not in ['', 'none', 'nopool'] )
+                v['pool'] = ','.join(sorted(pools_for_sample))
+
+        if any(v.get('pool') for v in data.values()):
+            headers['pool'] = {
+                'title': 'Pool Name',
+                'description': 'Pool in which this library was sequenced.',
+                'format': '{s}',
+                'placement': 4.0,
                 'textcell': True
             }
 
