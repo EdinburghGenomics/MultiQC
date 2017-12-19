@@ -722,7 +722,7 @@ tbody .sorthandle {
 }
 .mqc_table .text-cell .wrapper {
     overflow: hidden;
-    z-index: 1;
+    z-index: inherit;
 }
 .mqc_table .wrapper {
     display: inline-block;
