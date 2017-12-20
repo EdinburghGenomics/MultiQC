@@ -295,7 +295,7 @@ class MultiqcModule(BaseMultiqcModule):
                                      for sn in self.bcl2fastq_bysample[k].get("SampleNames", []) ]
                 pools_set = set( pn for pn in pools_for_sample
                                  if pn.lower not in ['', 'none', 'nopool'] )
-                v['pool'] = ','.join(sorted(pools_for_sample))
+                v['pool'] = ','.join(sorted(pools_set))
 
         if any(v.get('pool') for v in data.values()):
             headers['pool'] = {
