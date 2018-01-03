@@ -58,7 +58,7 @@ class MultiqcModule(BaseMultiqcModule):
                 f['s_name'] = f['s_name'][:-11]
             # Skip if we already have this report - parsing zip files is slow..
             if (f['s_name'], f.get('read_pairs')) in self.fastqc_data.keys():
-                log.debug("Skipping '{}' as already parsed '{}'".format(f['fn'], s_name))
+                log.warning("Skipping '{}' as already parsed '{}'".format(f['fn'], f['s_name']))
                 continue
             try:
                 fqc_zip = zipfile.ZipFile(os.path.join(f['root'], f['fn']))
