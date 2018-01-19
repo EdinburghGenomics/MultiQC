@@ -256,7 +256,7 @@ class MultiqcModule(BaseMultiqcModule):
         # I'm hoping I can excise this but I've been asked to try including it...
         # We could show that as a percentage?  I have to calculate these explicitly.
         # Also this may not make sense outside of our assumption that we are processing one lane at a time.
-        grand_total_reads = sum( bysample["total"] for total in  self.bcl2fastq_bysample.values() )
+        grand_total_reads = sum( s["total"] for s in self.bcl2fastq_bysample.values() )
 
         # This should always be the same, right???
         grand_total_2 = sum( lane["total"] for run in self.bcl2fastq_data.values() for lane in run.values() )
