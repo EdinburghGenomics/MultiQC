@@ -256,14 +256,15 @@ class MultiqcModule(BaseMultiqcModule):
         # I'm hoping I can excise this but I've been asked to try including it...
         # We could show that as a percentage?  I have to calculate these explicitly.
         # Also this may not make sense outside of our assumption that we are processing one lane at a time.
-        grand_total_reads = sum( s["total"] for s in self.bcl2fastq_bysample.values() )
+        # The following gives me the total number of good reads, same as "TotalClustersPF" in the JSON.
+        grand_total_1 = sum( s["total"] for s in self.bcl2fastq_bysample.values() )
 
-        # This should always be the same, right???
-        grand_total_2 = sum( lane["total"] for run in self.bcl2fastq_data.values() for lane in run.values() )
-        assert grand_total_2 == grand_total_reads
+        # Alternatively, I could exclude unassigned reads?? But then the unassigned percentage would look
+        # silly and could be > 100. Anyway this does it...
+        #grand_total_2 = sum( lane["total"] for run in self.bcl2fastq_data.values() for lane in run.values() )
 
         for key, val in self.bcl2fastq_bysample.items():
-            data[key]['total_as_pct'] = pct( val["total"], grand_total_reads )
+            data[key]['total_as_pct'] = pct( val["total"], grand_total_1 )
 
         headers['total_as_pct'] = {
             'title': '% Fragments',
