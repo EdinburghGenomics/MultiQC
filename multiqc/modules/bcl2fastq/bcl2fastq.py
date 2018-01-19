@@ -237,10 +237,10 @@ class MultiqcModule(BaseMultiqcModule):
     def add_general_stats(self):
         data = {
             key: {
-                "yieldQ30": self.bcl2fastq_bysample[key]["yieldQ30"],
-                "total": self.bcl2fastq_bysample[key]["total"],
-                "perfectPercent": pct( self.bcl2fastq_bysample[key]["perfectIndex"], self.bcl2fastq_bysample[key]["total"] )
-            } for key in self.bcl2fastq_bysample.keys()
+                "yieldQ30": val["yieldQ30"],
+                "total": val["total"],
+                "perfectPercent": pct( val["perfectIndex"], val["total"] )
+            } for key, val in self.bcl2fastq_bysample.items()
         }
         headers = OrderedDict()
         headers['total'] = {
@@ -252,6 +252,29 @@ class MultiqcModule(BaseMultiqcModule):
             'shared_key': 'read_count',
             'format': '{:,}'
         }
+
+        # I'm hoping I can excise this but I've been asked to try including it...
+        # We could show that as a percentage?  I have to calculate these explicitly.
+        # Also this may not make sense outside of our assumption that we are processing one lane at a time.
+        grand_total_reads = sum( bysample["total"] for total in  self.bcl2fastq_bysample.values() )
+
+        # This should always be the same, right???
+        grand_total_2 = sum( lane["total"] for run in self.bcl2fastq_data.values() for lane in run.values() )
+        assert grand_total_2 == grand_total_reads
+
+        for key, val in self.bcl2fastq_bysample.items():
+            data[key]['total_as_pct'] = pct( val["total"], grand_total_reads )
+
+        headers['total_as_pct'] = {
+            'title': '% Fragments',
+            'description': 'Total number of fragments expressed as a percentage of the total processed.',
+            'max': 100,
+            'min': 0,
+            'scale': 'Blues',
+            'format': '{0:.2f}'
+        }
+        # ...End of dubious bit
+
         headers['yieldQ30'] = {
             'title': '{} Yield &ge; Q30'.format(config.base_count_prefix),
             'description': 'Number of bases with a Phred score of 30 or higher ({})'.format(config.base_count_desc),
