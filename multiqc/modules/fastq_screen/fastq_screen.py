@@ -177,7 +177,10 @@ class MultiqcModule(BaseMultiqcModule):
 
     def fqscreen_simple_plot(self):
         """ Makes a simple bar plot with summed alignment counts for
-        each species, stacked. """
+            each species, stacked.
+            Patched by Tim to make the initial height more sansible for large
+            sample sets.
+        """
 
         # First, sum the different types of alignment counts
         data = OrderedDict()
@@ -200,6 +203,10 @@ class MultiqcModule(BaseMultiqcModule):
             'ylab_format': '{value}%',
             'tt_percentages': False
         }
+
+        # This kinda works...
+        if len(data) > 24:
+            pconfig['height'] = (20 * len(data)) + 50
 
         return ("<p>Summed alignment percentages are shown below. Note that percentages \
                 can sum to greater than 100% if reads align to multiple organisms.</p>" +
