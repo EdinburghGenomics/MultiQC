@@ -36,8 +36,8 @@ class MultiqcModule(BaseMultiqcModule):
         # Filter to strip out ignored sample names
         self.rsem_mapped_data = self.ignore_samples(self.rsem_mapped_data)
 
-        if len(self.rsem_mapped_data):
-            log.info("Could not find any reports in {}".format(config.analysis_dir))
+        if len(self.rsem_mapped_data) == 0:
+            log.debug("Could not find any reports in {}".format(*config.analysis_dir))
             raise UserWarning
 
         log.info("Found {} reports".format(len(self.rsem_mapped_data)))

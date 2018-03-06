@@ -367,6 +367,7 @@ function plot_xy_line_graph(target, ds){
   Highcharts.chart(target, {
     chart: {
       type: 'line',
+      height: config['height'],
       zoomType: 'x'
     },
     title: {
@@ -538,6 +539,7 @@ function plot_stacked_bar_graph(target, ds){
   Highcharts.chart(target, {
     chart: {
       type: 'bar',
+      height: config['height'],
       zoomType: 'x'
     },
     title: {
@@ -718,8 +720,8 @@ function plot_scatter_plot (target, ds){
       type: 'scatter',
       zoomType: 'xy',
       plotBorderWidth: 1,
-      height: config['square'] ? 500 : undefined,
-      width: config['square'] ? 500 : undefined
+      height: config['height'] || (config['square'] ? 500 : undefined),
+      width: config['width'] || (config['square'] ? 500 : undefined)
     },
     title: {
       text: config['title'],
@@ -922,7 +924,7 @@ function plot_beeswarm_graph(target, ds){
   var ph_min = 40;
   var ph_max = 100;
   var pheight = 600 / categories.length;
-  pheight = Math.min(ph_max, Math.max(ph_min, pheight));
+  pheight = config['height'] || Math.min(ph_max, Math.max(ph_min, pheight));
 
   // Clear the loading text and add hover text placeholder
   $('#'+target).html('<div class="beeswarm-hovertext"><em class="placeholder">Hover over a data point for more information</em></div><div class="beeswarm-plots"></div>');
@@ -1405,8 +1407,8 @@ function plot_heatmap(target, ds){
     chart: {
       type: 'heatmap',
       zoomType: 'xy',
-      height: config['square'] ? 500 : undefined,
-      width: config['square'] ? 530 : undefined,
+      height: config['height'] || (config['square'] ? 500 : undefined),
+      width: config['width'] || (config['square'] ? 500 : undefined)
       marginTop: config['title'] ? 60 : 50
     },
     plotOptions: {
