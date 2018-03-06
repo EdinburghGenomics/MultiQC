@@ -721,7 +721,7 @@ function plot_scatter_plot (target, ds){
       zoomType: 'xy',
       plotBorderWidth: 1,
       height: config['height'] || (config['square'] ? 500 : undefined),
-      width: config['width'] || (config['square'] ? 500 : undefined)
+      width:  config['width']  || (config['square'] ? 500 : undefined)
     },
     title: {
       text: config['title'],
@@ -1408,7 +1408,7 @@ function plot_heatmap(target, ds){
       type: 'heatmap',
       zoomType: 'xy',
       height: config['height'] || (config['square'] ? 500 : undefined),
-      width: config['width'] || (config['square'] ? 500 : undefined)
+      width:  config['width']  || (config['square'] ? 500 : undefined),
       marginTop: config['title'] ? 60 : 50
     },
     plotOptions: {
