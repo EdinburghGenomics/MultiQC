@@ -19,6 +19,9 @@ current_single_plot = undefined;
 // Function to plot heatmap
 function fastqc_seq_content_heatmap() {
 
+    if( typeof fastqc_seq_content_data === 'undefined' )
+        return;
+
     // Get sample names, rename and skip hidden samples
     sample_names = [];
     sample_statuses = [];
