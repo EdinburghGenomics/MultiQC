@@ -7,9 +7,7 @@ from collections import defaultdict, OrderedDict
 import logging
 import re
 
-from . import get_uid
-
-from multiqc.utils import config
+from multiqc.utils import config, report
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +15,12 @@ class datatable (object):
     """ Data table class. Prepares and holds data and configuration
     for either a table or a beeswarm plot. """
 
-    def __init__ (self, data, headers=[], pconfig={}):
+    def __init__ (self, data, headers=None, pconfig=None):
         """ Prepare data for use in a table or plot """
+        if headers is None:
+            headers = []
+        if pconfig is None:
+            pconfig = {}
 
         # Given one dataset - turn it into a list
         if type(data) is not list:
@@ -50,6 +52,16 @@ class datatable (object):
                 for k in keys:
                     headers[idx][k] = {}
 
+            # Ensure that keys are strings, not numeric
+            keys = [str(k) for k in keys]
+            for k in list(headers[idx].keys()):
+                headers[idx][str(k)] = headers[idx].pop(k)
+            # Ensure that all sample names are strings as well
+            data[idx] = {str(k):v for k,v in data[idx].items()}
+            for s_name in data[idx].keys():
+                for k in list(data[idx][s_name].keys()):
+                    data[idx][s_name][str(k)] = data[idx][s_name].pop(k)
+
             # Check that we have some data in each column
             empties = list()
             for k in keys:
@@ -65,18 +77,21 @@ class datatable (object):
 
             for k in keys:
                 # Unique id to avoid overwriting by other datasets
-                headers[idx][k]['rid'] = '{}_{}'.format( get_uid(), re.sub(r'\W+', '_', k) )
+                headers[idx][k]['rid'] = report.save_htmlid(re.sub(r'\W+', '_', k))
 
                 # Use defaults / data keys if headers not given
                 headers[idx][k]['namespace']   = headers[idx][k].get('namespace', pconfig.get('namespace', ''))
                 headers[idx][k]['title']       = headers[idx][k].get('title', k)
                 headers[idx][k]['description'] = headers[idx][k].get('description', headers[idx][k]['title'])
                 headers[idx][k]['scale']       = headers[idx][k].get('scale', pconfig.get('scale', 'GnBu'))
-                headers[idx][k]['format']      = headers[idx][k].get('format', pconfig.get('format', '{:.1f}'))
+                headers[idx][k]['format']      = headers[idx][k].get('format', pconfig.get('format', '{:,.1f}'))
                 headers[idx][k]['colour']      = headers[idx][k].get('colour', pconfig.get('colour', None))
                 headers[idx][k]['hidden']      = headers[idx][k].get('hidden', pconfig.get('hidden', None))
                 headers[idx][k]['max']         = headers[idx][k].get('max', pconfig.get('max', None))
                 headers[idx][k]['min']         = headers[idx][k].get('min', pconfig.get('min', None))
+                headers[idx][k]['ceiling']     = headers[idx][k].get('ceiling', pconfig.get('ceiling', None))
+                headers[idx][k]['floor']       = headers[idx][k].get('floor', pconfig.get('floor', None))
+                headers[idx][k]['minRange']    = headers[idx][k].get('minRange', pconfig.get('minRange', None))
                 headers[idx][k]['shared_key']  = headers[idx][k].get('shared_key', pconfig.get('shared_key', None))
                 headers[idx][k]['modify']      = headers[idx][k].get('modify', pconfig.get('modify', None))
                 headers[idx][k]['placement']   = float( headers[idx][k].get('placement', 1000) )
@@ -94,19 +109,25 @@ class datatable (object):
                 except KeyError:
                     pass
 
+                # Also overwite placement if set in config
+                try:
+                    headers[idx][k]['placement'] = float(config.table_columns_placement[ headers[idx][k]['namespace'] ][k])
+                except (KeyError, ValueError):
+                    pass
+
                 # Work out max and min value if not given
                 setdmax = False
                 setdmin = False
                 try:
                     headers[idx][k]['dmax'] = float(headers[idx][k]['max'])
                 except TypeError:
-                    headers[idx][k]['dmax'] = float("-inf")
+                    headers[idx][k]['dmax'] = 0
                     setdmax = True
 
                 try:
                     headers[idx][k]['dmin'] = float(headers[idx][k]['min'])
                 except TypeError:
-                    headers[idx][k]['dmin'] = float("inf")
+                    headers[idx][k]['dmin'] = 0
                     setdmin = True
 
                 # Figure out the min / max if not supplied
@@ -124,6 +145,15 @@ class datatable (object):
                             val = samp[k] # couldn't convert to float - keep as a string
                         except KeyError:
                             pass # missing data - skip
+                    # Limit auto-generated scales with floor, ceiling and minRange.
+                    if headers[idx][k]['ceiling'] is not None and headers[idx][k]['max'] is None:
+                        headers[idx][k]['dmax'] = min(headers[idx][k]['dmax'], float(headers[idx][k]['ceiling']))
+                    if headers[idx][k]['floor'] is not None and headers[idx][k]['min'] is None:
+                        headers[idx][k]['dmin'] = max(headers[idx][k]['dmin'], float(headers[idx][k]['floor']))
+                    if headers[idx][k]['minRange'] is not None:
+                        drange = headers[idx][k]['dmax'] - headers[idx][k]['dmin']
+                        if drange < float(headers[idx][k]['minRange']):
+                            headers[idx][k]['dmax'] = headers[idx][k]['dmin'] + float(headers[idx][k]['minRange'])
 
         # Collect settings for shared keys
         shared_keys = defaultdict(lambda: dict())
@@ -163,7 +193,9 @@ class datatable (object):
         """Gets the headers in the order they want to be displayed.
            Returns an iterable of triplets: (idx, key, header_info)
         """
+        res = list()
         #Scan through self.headers_in_order and just bolt on the actual header info
         for bucket in sorted(self.headers_in_order):
             for idx, k in self.headers_in_order[bucket]:
-                yield idx, k, self.headers[idx][k]
+                res.append( (idx, k, self.headers[idx][k]) )
+        return res
