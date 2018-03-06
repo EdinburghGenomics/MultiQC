@@ -311,9 +311,9 @@ class MultiqcModule(BaseMultiqcModule):
         cats['Multiple Genomes'] = { 'name': 'Multiple Genomes', 'color': '#820000' }
         cats['No hits'] = { 'name': 'No hits', 'color': '#cccccc' }
 
-        # This kinda works...
+        # This kinda works, since I allowed height override in the JS...
         if len(data) > 24:
-            pconfig['height'] = (20 * len(data)) + 50
+            pconfig['height'] = (16 * len(data)) + 50
 
         return ("<p>Summed alignment percentages are shown below. Note that percentages \
                 can sum to greater than 100% if reads align to multiple organisms.</p>" +
