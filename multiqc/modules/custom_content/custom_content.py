@@ -2,8 +2,9 @@
 
 """ Core MultiQC module to parse output from custom script output """
 
-from __future__ import print_function
+from __future__ import division, print_function
 from collections import defaultdict, OrderedDict
+from pprint import pformat
 import logging
 import json
 import os
@@ -93,7 +94,7 @@ def custom_module_classes():
             if parsed_data is not None:
                 c_id = parsed_data.get('id', k)
                 if len(parsed_data.get('data', {})) > 0:
-                    if type(parsed_data['data']) == str:
+                    if type(parsed_data['data']) in [str, list]:
                         cust_mods[c_id]['data'] = parsed_data['data']
                     else:
                         cust_mods[c_id]['data'].update( parsed_data['data'] )
@@ -169,6 +170,23 @@ def custom_module_classes():
 
     # Go through each data type
     parsed_modules = list()
+
+    # cust_mods is now a dict of id -> { config, data }
+    # What I want to do is aggregate on ['config']['section_name'] and
+    # merge any duplicate sections into the first instance.
+    for k in list(cust_mods):
+        # Careful not to process any already removed. Also avoid general stats.
+        if k in cust_mods and cust_mods[k]['config'].get('plot_type') != 'generalstats':
+            cust_mods[k]['configs'] = [ cust_mods[k]['config'] ]
+            cust_mods[k]['datae']   = [ cust_mods[k]['data']   ] # datae is the plural of data, honest
+            for k2 in list(cust_mods):
+                if ( k2 != k and
+                     cust_mods[k2]['config']['section_name'] == cust_mods[k]['config']['section_name'] ):
+                    # Merge and eliminate K2
+                    cust_mods[k]['configs'].append(cust_mods[k2]['config'])
+                    cust_mods[k]['datae'].append(cust_mods[k2]['data'])
+                    del(cust_mods[k2])
+
     for k, mod in cust_mods.items():
 
         # General Stats
@@ -202,7 +220,9 @@ def custom_module_classes():
         # Initialise this new module class and append to list
         else:
             parsed_modules.append( MultiqcModule(k, mod) )
-            log.info("{}: Found {} samples ({})".format(k, len(mod['data']), mod['config'].get('plot_type')))
+            log.info("{}: Found {} samples ({})".format(
+                      k,        '+'.join([str(len(d)) for d in mod['datae']]),
+                                            mod['config'].get('plot_type')))
 
     # Sort sections if we have a config option for order
     mod_order = getattr(config, 'custom_content', {}).get('order', [])
@@ -216,6 +236,11 @@ class MultiqcModule(BaseMultiqcModule):
     """ Module class, used for each custom content type """
 
     def __init__(self, c_id, mod):
+        """ Draw the various plots we have collected.
+        """
+        # To support multiple plots in a section, some things are set from the first
+        # plot and others are set from each individual plot.
+        # All 'section_name' will be the same in any case.
 
         modname = mod['config'].get('section_name', c_id.replace('_', ' ').title())
         if modname == '' or modname is None:
@@ -230,48 +255,62 @@ class MultiqcModule(BaseMultiqcModule):
             target = modname if 'section_anchor' in mod['config'] else ''
         )
 
-        pconfig = mod['config'].get('pconfig', {})
-        if pconfig.get('title') is None:
-            pconfig['title'] = modname
+        for mod_config, mod_data in sorted( zip(mod['configs'], mod['datae']),
+                                            key = lambda i: i[0].get('id') ):
 
-        # Table
-        if mod['config'].get('plot_type') == 'table':
-            pconfig['sortRows'] = pconfig.get('sortRows', False)
-            headers = mod['config'].get('headers')
+            pconfig = mod_config.get('pconfig', {})
+            # Sections need not have a title but the plot really should
+            # From now on a section is a plot - confusing
+            plot_name = pconfig.get('title')
+            if pconfig.get('title') is None:
+                pconfig['title'] = modname
 
-            self.add_section( plot = table.plot(mod['data'], headers, pconfig) )
+            # Table
+            if mod_config.get('plot_type') == 'table':
+                pconfig['sortRows'] = pconfig.get('sortRows', False)
+                headers = mod_config.get('headers')
 
-        # Bar plot
-        elif mod['config'].get('plot_type') == 'bargraph':
-            self.add_section( plot = bargraph.plot(mod['data'], mod['config'].get('categories'), pconfig) )
+                self.add_section( name = plot_name,
+                                  plot = table.plot(mod_data, headers, pconfig) )
 
-        # Line plot
-        elif mod['config'].get('plot_type') == 'linegraph':
-            self.add_section( plot = linegraph.plot(mod['data'], pconfig) )
+            # Bar plot
+            elif mod_config.get('plot_type') == 'bargraph':
+                self.add_section( name = plot_name,
+                                  plot = bargraph.plot(mod_data, mod_config.get('categories'), pconfig) )
 
-        # Scatter plot
-        elif mod['config'].get('plot_type') == 'scatter':
-            self.add_section( plot = scatter.plot(mod['data'], pconfig) )
+            # Line plot
+            elif mod_config.get('plot_type') == 'linegraph':
+                self.add_section( name = plot_name,
+                                  plot = linegraph.plot(mod_data, pconfig) )
 
-        # Heatmap
-        elif mod['config'].get('plot_type') == 'heatmap':
-            self.add_section( plot = heatmap.plot(mod['data'], mod['config'].get('xcats'), mod['config'].get('ycats'), pconfig) )
+            # Scatter plot
+            elif mod_config.get('plot_type') == 'scatter':
+                self.add_section( name = plot_name,
+                                  plot = scatter.plot(mod_data, pconfig) )
 
-        # Beeswarm plot
-        elif mod['config'].get('plot_type') == 'beeswarm':
-            self.add_section( plot = beeswarm.plot(mod['data'], pconfig) )
+            # Heatmap
+            elif mod_config.get('plot_type') == 'heatmap':
+                self.add_section( name = plot_name,
+                                  plot = heatmap.plot(mod_data, mod_config.get('xcats'), mod_config.get('ycats'), pconfig) )
 
-        # Raw HTML
-        elif mod['config'].get('plot_type') == 'html':
-            self.add_section( content = mod['data'] )
+            # Beeswarm plot
+            elif mod_config.get('plot_type') == 'beeswarm':
+                self.add_section( name = plot_name,
+                                  plot = beeswarm.plot(mod_data, pconfig) )
 
-        # Not supplied
-        elif mod['config'].get('plot_type') == None:
-            log.warning("Plot type not found for content ID '{}'".format(c_id))
+            # Raw HTML
+            elif mod_config.get('plot_type') == 'html':
+                self.add_section( name = plot_name,
+                                  content = mod_data )
 
-        # Not recognised
-        else:
-            log.warning("Error - custom content plot type '{}' not recognised for content ID {}".format(mod['config'].get('plot_type'), c_id))
+            # Not supplied
+            elif mod_config.get('plot_type') == None:
+                log.warning("Plot type not found for content ID '{}'".format(c_id))
+
+            # Not recognised
+            else:
+                log.warning("Error - custom content plot type '{}' not recognised for content ID {}".format(
+                                                              mod_config.get('plot_type'),    c_id))
 
 
 def _find_file_header(f):
