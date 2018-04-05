@@ -181,6 +181,8 @@ def custom_module_classes():
             cust_mods[k]['datae']   = [ cust_mods[k]['data']   ] # datae is the plural of data, honest
             for k2 in list(cust_mods):
                 if ( k2 != k and
+                     cust_mods[k]['config'].get('section_name') and
+                     cust_mods[k2]['config'].get('section_name') and
                      cust_mods[k2]['config']['section_name'] == cust_mods[k]['config']['section_name'] ):
                     # Merge and eliminate K2
                     cust_mods[k]['configs'].append(cust_mods[k2]['config'])
@@ -221,7 +223,8 @@ def custom_module_classes():
         else:
             parsed_modules.append( MultiqcModule(k, mod) )
             log.info("{}: Found {} samples ({})".format(
-                      k,        '+'.join([str(len(d)) for d in mod['datae']]),
+                      mod['config'].get('section_name', k),
+                                '+'.join([str(len(d)) for d in mod['datae']]),
                                             mod['config'].get('plot_type')))
 
     # Sort sections if we have a config option for order
