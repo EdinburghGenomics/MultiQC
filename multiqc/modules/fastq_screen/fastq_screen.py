@@ -311,10 +311,11 @@ class MultiqcModule(BaseMultiqcModule):
         cats['Multiple Genomes'] = { 'name': 'Multiple Genomes', 'color': '#820000' }
         cats['No hits'] = { 'name': 'No hits', 'color': '#cccccc' }
 
-        # Special case for Human as requested by Richard
+        # Special case for Human as requested by Richard - sickly pink FTW
         # Not sure if I can make the list of organisms stable by including those with no hits?
         if 'Human' in cats:
             cats['Human']['color'] = '#ffccff'
+            cats.move_to_end('Human', last=False)
 
         # This kinda works, since I allowed height override in the JS...
         if len(data) > 24:
