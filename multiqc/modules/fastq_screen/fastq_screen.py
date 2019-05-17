@@ -91,7 +91,7 @@ class MultiqcModule(BaseMultiqcModule):
 
                 #Let's use a popover, since bootstrap is already loaded in the document.
                 #https://www.w3schools.com/bootstrap/bootstrap_popover.asp
-                links[f['s_name']] = "<a href='{l}' class='fqspopover' title='{t} FastQ Screen' class='alt_col_link'>{t}</a>".format(
+                links[f['s_name']] = "<a href='{l}' class='fqspopover alt_col_link' title='{t} FastQ Screen'>{t}</a>".format(
                     l=url_escape(png_relpath), t=html_escape(f['s_name']) )
             except FileNotFoundError:
                 log.warning("No .png file for {}".format(f['fn']))
