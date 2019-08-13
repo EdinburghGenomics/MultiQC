@@ -251,7 +251,7 @@ class MultiqcModule(BaseMultiqcModule):
             'scale': 'Blues',
             'shared_key': 'read_count',
             'format': '{:,}',
-            get_scale: lambda k: 'Reds' if k.lower() == 'unassigned' else 'Blues'
+            'get_scale': lambda k: 'Oranges' if k.lower() in ['unassigned', 'undetermined'] else 'Blues'
         }
 
         # I'm hoping I can excise this but I've been asked to try including it...
@@ -273,7 +273,8 @@ class MultiqcModule(BaseMultiqcModule):
             'max': 100,
             'min': 0,
             'scale': 'Blues',
-            'format': '{0:.2f}'
+            'format': '{0:.2f}',
+            'get_scale': lambda k: 'Oranges' if k.lower() in ['unassigned', 'undetermined'] else 'Blues'
         }
         # ...End of dubious bit
 
