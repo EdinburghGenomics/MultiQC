@@ -250,7 +250,8 @@ class MultiqcModule(BaseMultiqcModule):
             'min': 0,
             'scale': 'Blues',
             'shared_key': 'read_count',
-            'format': '{:,}'
+            'format': '{:,}',
+            get_scale: lambda k: 'Reds' if k.lower() == 'unassigned' else 'Blues'
         }
 
         # I'm hoping I can excise this but I've been asked to try including it...

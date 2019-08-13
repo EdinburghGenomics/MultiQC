@@ -122,10 +122,17 @@ def make_table (dt):
             )
 
         # Make a colour scale
-        if header.get('scale', False) == False:
-            c_scale = None
+        get_c_scale = None
+        if 'get_scale' in header:
+            # Dynamic scale as a function of sample name
+            get_c_scale = lambda k: mqc_colour.mqc_colour_scale( header['get_scale'](k),
+                                                                 header['dmin'],
+                                                                 header['dmax'] )
+        elif header.get('scale', False) == False:
+            get_c_scale = None
         else:
             c_scale = mqc_colour.mqc_colour_scale(header['scale'], header['dmin'], header['dmax'])
+            get_c_scale = lambda k: c_scale
 
         # Add the data table cells
         for (s_name, samp) in dt.data[idx].items():
@@ -172,13 +179,14 @@ def make_table (dt):
                     valstring += header.get('suffix', '')
 
                 # Build HTML
-                if not header.get('scale'):
+                if not header.get('scale') or header.get('get_scale'):
+                    # Not sure what this clause is doing?
                     if s_name not in t_rows:
                         t_rows[s_name] = dict()
                     t_rows[s_name][rid] = '<td class="{rid} {h}">{v}</td>'.format(rid=rid, h=hide, v=val)
                 else:
-                    if c_scale is not None:
-                        col = ' background-color:{};'.format(c_scale.get_colour(val))
+                    if get_c_scale is not None:
+                        col = ' background-color:{};'.format(get_c_scale(s_name).get_colour(val))
                     else:
                         col = ''
                     bar_html = '<span class="bar" style="width:{}%;{}"></span>'.format(percentage, col)
