@@ -179,7 +179,7 @@ def make_table (dt):
                     valstring += header.get('suffix', '')
 
                 # Build HTML
-                if not header.get('scale') or header.get('get_scale'):
+                if not (header.get('scale') or header.get('get_scale')):
                     # Not sure what this clause is doing?
                     if s_name not in t_rows:
                         t_rows[s_name] = dict()
