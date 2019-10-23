@@ -8,7 +8,7 @@ from pprint import pformat
 import logging
 import json
 import os
-import yaml
+import yaml, yamlloader
 
 from multiqc import config
 from multiqc.utils import report
@@ -73,12 +73,8 @@ def custom_module_classes():
             parsed_data = None
             if f_extension == '.yaml' or f_extension == '.yml':
                 try:
-                    # Parsing as OrderedDict is slightly messier with YAML
-                    # http://stackoverflow.com/a/21048064/713980
-                    def dict_constructor(loader, node):
-                        return OrderedDict(loader.construct_pairs(node))
-                    yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, dict_constructor)
-                    parsed_data = yaml.load(f['f'])
+                    # Parsing as OrderedDict using yamlloader
+                    parsed_data = yaml.load(f['f'], Loader=yamlloader.ordereddict.CSafeLoader)
                 except Exception as e:
                     log.warning("Error parsing YAML file '{}' (probably invalid YAML)".format(f['fn']))
                     log.warning("YAML error: {}".format(e))
@@ -324,8 +320,8 @@ def _find_file_header(f):
             hlines.append(l[1:])
     hconfig = None
     try:
-        hconfig = yaml.load("\n".join(hlines))
-        assert( type(hconfig) == dict)
+        hconfig = yaml.load("\n".join(hlines), Loader=yamlloader.ordereddict.CSafeLoader)
+        assert( type(hconfig) == OrderedDict )
     except yaml.YAMLError as e:
         log.warn("Could not parse comment file header for MultiQC custom content: {}".format(f['fn']))
         log.debug(e)
