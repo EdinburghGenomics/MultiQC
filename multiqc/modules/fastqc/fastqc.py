@@ -100,7 +100,10 @@ class MultiqcModule(BaseMultiqcModule):
         self.js = { 'assets/js/multiqc_fastqc.js' : os.path.join(os.path.dirname(__file__), 'assets', 'js', 'multiqc_fastqc.js') }
 
         # Colours to be used for plotting lines
-        self.status_colours = { 'pass': '#5cb85c', 'warn': '#f0ad4e', 'fail': '#d9534f', 'default': '#999' }
+        #self.status_colours = { 'pass': '#5cb85c', 'warn': '#f0ad4e', 'fail': '#d9534f', 'default': '#999' }
+
+        # Fixed for Matt (and anyone else who can't descern red/green). See also the corresponding CSS fix.
+        self.status_colours = { 'pass': '#5cb69e', 'warn': '#f0ad4e', 'fail': '#d95e00', 'default': '#999' }
 
         # Add to the general statistics table
         self.fastqc_general_stats()
